@@ -18,6 +18,7 @@ contract Marketplace is AccessControl{
   event Cancel(address seller, uint256 orderId, uint256 tokenId);
   event AuctionCreated(address initOwner,uint256 amount, uint256 tokenId, uint256 endTime);
   event BidCreated(address bidder, uint256 newPrice);
+  event AuctionCanceled(uint256 currentAuction,address initOwner);
   bytes32 public constant SIMPLE_ADMIN_ROLE = keccak256("SIMPLE_ADMIN_ROLE");
 
 
@@ -140,17 +141,22 @@ contract Marketplace is AccessControl{
   if(auctions[currentAuction].newOwner!=auctions[currentAuction].initOwner) {
   payable(auctions[currentAuction].newOwner).transfer(auctions[currentAuction].currentPrice);}
   auctions[currentAuction].status= Status.OVER;
+  emit AuctionCanceled(currentAuction, msg.sender);
   }
    /**
     @notice check status
   */
   function checkStatus() public returns (Status) {
+    (address creator, uint256 royalty) = INFT1155(token).getTokenData(auctions[currentAuction].tokenId);
     if(auctions[currentAuction].status==Status.OVER) {
       return Status.OVER;
     } else if(block.timestamp>auctions[currentAuction].endTime) {
       if(auctions[currentAuction].initOwner!=auctions[currentAuction].newOwner){ 
         if(auctions[currentAuction].currentPrice>=auctions[currentAuction].minPriceForSale) {
-        payable(auctions[currentAuction].initOwner).transfer(auctions[currentAuction].currentPrice);
+        uint comision = auctions[currentAuction].currentPrice.mul(royalty).div(100);
+        uint payAmount = auctions[currentAuction].currentPrice.sub(comision);
+        payable(auctions[currentAuction].initOwner).transfer(payAmount);
+        payable(creator).transfer(comision);
         INFT1155(token).safeTransferFrom(auctions[currentAuction].initOwner,auctions[currentAuction].newOwner, auctions[currentAuction].tokenId, auctions[currentAuction].amount, "");
             auctions[currentAuction].status=Status.OVER;
       return Status.OVER;
@@ -159,7 +165,6 @@ contract Marketplace is AccessControl{
       auctions[currentAuction].status=Status.OVER;
       return Status.OVER;
       }} else {
-        console.log("AQuiii");
         auctions[currentAuction].status=Status.OVER;
         return Status.OVER;
       }
