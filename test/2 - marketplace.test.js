@@ -11,13 +11,42 @@ const { current } = require("@openzeppelin/test-helpers/src/balance");
 require("chai").use(require("chai-bn")(BN));
 
 const toWei = (value) => web3.utils.toWei(String(value));
-describe("Marketplace's auctions", () => {
-  let admin;
-  let alice;
-  let bob;
-  let recipient;
-
+describe ("Only super admin functions", () => {
   let nft1155;
+  let marketplace;
+
+  beforeEach(async () => {
+    [auctioneer, user1, user2] = await ethers.getSigners();
+
+    const NFT1155 = await ethers.getContractFactory("NFT1155");
+    nft1155 = await NFT1155.deploy("htttp://");
+    await nft1155.deployed();
+
+    const Marketplace = await ethers.getContractFactory("Marketplace");
+    marketplace = await Marketplace.connect(auctioneer).deploy(nft1155.address);
+    await marketplace.deployed();
+
+    await nft1155
+      .connect(auctioneer)
+      .mintNew(
+        ethers.utils.parseUnits("100", "ether"),
+        10,
+        "my content",
+        "nft-hash-1"
+      );
+});
+it("Only super admin can grant roles", async ()=>{
+  const role = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("SIMPLE_ADMIN_ROLE")
+  );
+await marketplace.connect(auctioneer).grantRole(role,user2.address);
+
+await expectRevert(marketplace.connect(user2).grantRole(role,user1.address),"AccessControl: sender must be an admin to grant");
+
+});
+});
+describe("Marketplace's auctions", () => {
+  let nft1155; 
   let marketplace;
 
   beforeEach(async () => {
@@ -196,20 +225,7 @@ describe("Marketplace's auctions", () => {
     expect(Number(balanceETHAuctioneerAfter)).to.gt(
       Number(balanceETHAuctioneerBefore)
     );
-  });
-  it("An user can win an auction", async () => {
-    await nft1155
-      .connect(auctioneer)
-      .setApprovalForAll(marketplace.address, true);
-    const initPrice = ethers.utils.parseUnits("1", "ether"),
-      endTime = Number(await time.latest()) + Number(time.duration.days(3)),
-      tokenId = 1,
-      amount = ethers.utils.parseUnits("10", "ether"),
-      minPriceForSale = ethers.utils.parseUnits("5", "ether");
-    await marketplace
-      .connect(auctioneer)
-      .createAuction(initPrice, tokenId, amount, endTime, minPriceForSale);
-});
+  }); });
 describe("Markeplace", () => {
   let admin;
   let alice;
