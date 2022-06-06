@@ -3,28 +3,61 @@
  */
 
 require("dotenv").config();
-require("hardhat-gas-reporter");
-require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-etherscan");
-require("@nomiclabs/hardhat-web3");
-require("@openzeppelin/hardhat-upgrades");
+require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-truffle5");
+// require("hardhat-deploy");
 require("solidity-coverage");
+require("hardhat-gas-reporter");
+require("chai");
+require("@nomiclabs/hardhat-ethers");
+require("@openzeppelin/hardhat-upgrades");
+
+let mnemonic = process.env.MNEMONIC
+  ? process.env.MNEMONIC
+  : "test test test test test test test test test test test test";
 
 module.exports = {
   networks: {
-    hardhat: {},
-    live: {
-      url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.MAINNET_PRIVKEY],
+    hardhat: {
+      forking: {
+        enabled: true,
+        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
+        blockNumber: 14679140,
+      },
     },
-    rinkeby: {
-      url: `https://eth-rinkeby.alchemyapi.io/v2/${process.env.ALCHEMY_KEY}`,
-      accounts: [process.env.MAINNET_PRIVKEY],
+    testnet: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
+      chainId: 97,
+      gasPrice: 20000000000,
+      accounts: [process.env.TESTNETPRIVKEY],
+    },
+    mainnet: {
+      url: "https://bsc-dataseed.binance.org/",
+      chainId: 56,
+      gasLimit: 20000000000,
+      accounts: [process.env.MAINNETPRIVKEY],
+      saveDeployments: true,
     },
   },
+  etherscan: {
+    apiKey: process.env.BSCSCAN_API,
+  },
+  namedAccounts: {
+    deployer: 0,
+    feeRecipient: 1,
+    user: 2,
+  },
+  gasReporter: {
+    currency: "USD",
+    gasPrice: 50,
+    enabled: process.env.REPORT_GAS ? true : false,
+    coinmarketcap: process.env.CMC_API_KEY,
+    excludeContracts: ["mocks/"],
+  },
   solidity: {
-    version: "0.8.0",
+    version: "0.8.7",
     settings: {
       optimizer: {
         enabled: true,
@@ -34,11 +67,5 @@ module.exports = {
   },
   mocha: {
     timeout: 240000,
-  },
-  gasReporter: {
-    enabled: true,
-    coinmarketcap: "556f708d-d5c0-4956-abb1-e2665c24405e",
-    currency: "USD",
-    gasPrice: 300,
   },
 };
